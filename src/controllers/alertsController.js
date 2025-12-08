@@ -1,4 +1,4 @@
-const { PublicHealthAlert } = require("../models");
+const PublicHealthAlert = require("../models/PublicHealthAlert");
 
 // Create alert
 exports.createAlert = async (req, res) => {

@@ -1,4 +1,4 @@
-const { InventoryRegistry } = require("../models");
+const InventoryRegistry = require("../models/InventoryRegistry");
 
 // Create an item
 exports.createItem = async (req, res) => {
@@ -11,7 +11,7 @@ exports.createItem = async (req, res) => {
 };
 
 // Get all items
-exports.getAllItems = async (req, res) => {
+exports.getAllInventory = async (req, res) => {
   try {
     const items = await InventoryRegistry.findAll();
     res.json(items);

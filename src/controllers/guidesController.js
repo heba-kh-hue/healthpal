@@ -1,4 +1,4 @@
-const { HealthGuide } = require("../models");
+const HealthGuide = require("../models/HealthGuide");
 
 // ================================
 // Create a new guide
