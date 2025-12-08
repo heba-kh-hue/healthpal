@@ -11,7 +11,7 @@ exports.createItem = async (req, res) => {
 };
 
 // Get all items
-exports.getAllInventory = async (req, res) => {
+exports.getAllItems = async (req, res) => {
   try {
     const items = await InventoryRegistry.findAll();
     res.json(items);

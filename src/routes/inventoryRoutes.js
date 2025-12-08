@@ -3,7 +3,7 @@ const router = express.Router();
 
 const {
   createItem,
-  getAllInventory,
+  getAllItems,    
   getItemById,
   updateItem,
   deleteItem
@@ -13,7 +13,7 @@ const {
 router.post("/", createItem);
 
 // get all
-router.get("/", getAllInventory);
+router.get("/", getAllItems);   
 
 // get one
 router.get("/:id", getItemById);

@@ -7,31 +7,42 @@ const MedicineRequest = sequelize.define("medicine_requests", {
     primaryKey: true,
     autoIncrement: true
   },
-  patient_id: DataTypes.INTEGER,
-  item_name_requested: DataTypes.STRING,
-  quantity_needed: DataTypes.INTEGER,
-  delivery_location: DataTypes.STRING,
-  assigned_source_id: DataTypes.INTEGER,
+  patient_id: {
+    type: DataTypes.INTEGER
+  },
+  item_name_requested: {
+    type: DataTypes.STRING
+  },
+  quantity_needsys_configed: {
+  type: DataTypes.INTEGER
+ , field: "quantity_needsys_configed"
+},
+
+  delivery_location: {
+    type: DataTypes.STRING
+  },
+  assigned_source_id: {
+    type: DataTypes.INTEGER
+  },
   status: {
-    type: DataTypes.ENUM(
-      "pending",
-      "available",
-      "in_progress",
-      "fulfilled",
-      "rejected",
-      "cancelled"
-    ),
+    type: DataTypes.STRING,
     defaultValue: "pending"
   },
   requested_date: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+    type: DataTypes.DATE
   },
-  fulfilled_by: DataTypes.INTEGER,
-  fulfilled_date: DataTypes.DATE,
-  notes: DataTypes.TEXT
+  fulfilled_by: {
+    type: DataTypes.INTEGER
+  },
+  fulfilled_date: {
+    type: DataTypes.DATE
+  },
+  notes: {
+    type: DataTypes.TEXT
+  }
 }, {
   timestamps: false
+  ,freezeTableName: true  
 });
 
 module.exports = MedicineRequest;
