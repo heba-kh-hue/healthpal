@@ -1,8 +1,7 @@
 const HealthGuide = require("../models/HealthGuide");
 
-// ================================
+
 // Create a new guide
-// ================================
 exports.createGuide = async (req, res) => {
   try {
     const guide = await HealthGuide.create(req.body);
@@ -12,9 +11,8 @@ exports.createGuide = async (req, res) => {
   }
 };
 
-// ================================
+
 // Get all guides
-// ================================
 exports.getAllGuides = async (req, res) => {
   try {
     const guides = await HealthGuide.findAll();
@@ -24,9 +22,8 @@ exports.getAllGuides = async (req, res) => {
   }
 };
 
-// ================================
+
 // Get guide by ID
-// ================================
 exports.getGuideById = async (req, res) => {
   try {
     const guide = await HealthGuide.findByPk(req.params.id);
@@ -38,9 +35,8 @@ exports.getGuideById = async (req, res) => {
   }
 };
 
-// ================================
+
 // Update guide
-// ================================
 exports.updateGuide = async (req, res) => {
   try {
     const guide = await HealthGuide.findByPk(req.params.id);
@@ -53,9 +49,7 @@ exports.updateGuide = async (req, res) => {
   }
 };
 
-// ================================
 // Delete guide
-// ================================
 exports.deleteGuide = async (req, res) => {
   try {
     const guide = await HealthGuide.findByPk(req.params.id);
