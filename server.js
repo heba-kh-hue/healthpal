@@ -38,11 +38,11 @@ app.use(errorHandler);   // errors
 
 // connect DB
 sequelize.authenticate()
-  .then(() => console.log("✅ Database Connected Successfully"))
-  .catch((err) => console.log("❌ DB Connection Error:", err));
+  .then(() => console.log(" Database Connected Successfully"))
+  .catch((err) => console.log(" DB Connection Error:", err));
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(` Server is running on port ${PORT}`);
 });
