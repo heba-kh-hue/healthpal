@@ -4,6 +4,9 @@ const User = require('../models/User');
 const ConsultationSlot = require('../models/ConsultationSlot');
 const Consultation = require('../models/Consultation');
 const sequelize = require('../config/database');
+const Message = require('../models/Message');
+const translate = require('translate-google'); // <-- ADD THIS LINE
+
 
 // @desc    Doctor creates new availability slots
 // @route   POST /api/slots
@@ -61,49 +64,6 @@ exports.getDoctorSlots = async (req, res) => {
 // @desc    Patient books a consultation slot
 // @route   POST /api/consultations/book/:slotId
 // @access  Private (Patient)
-// exports.bookConsultation = async (req, res) => {
-//     const { slotId } = req.params;
-//     const patient_id = req.user.id;
-
-//     const t = await sequelize.transaction(); // Use a transaction for this critical operation
-
-//     try {
-//         // 1. Find the requested slot and lock it to prevent race conditions
-//         const slot = await ConsultationSlot.findByPk(slotId, { transaction: t, lock: true });
-
-//         // 2. Check if the slot exists, is in the future, and is not already booked
-//         if (!slot || slot.is_booked || new Date(slot.start_datetime) < new Date()) {
-//             await t.rollback();
-//             return res.status(400).json({ msg: 'Slot is not available for booking.' });
-//         }
-        
-//         // 3. Mark the slot as booked
-//         slot.is_booked = true;
-//         await slot.save({ transaction: t });
-
-//         // 4. Create the consultation record
-//         const doctor = await User.findByPk(slot.doctor_id);
-//         const consultation = await Consultation.create({
-//             patient_id,
-//             doctor_id: slot.doctor_id,
-//             slot_id: slot.id,
-//             specialty: doctor.specialty, // Get specialty from the doctor's profile
-//             mode: 'audio' // Default from schema
-//         }, { transaction: t });
-        
-//         // 5. If everything is successful, commit the transaction
-//         await t.commit();
-//         res.status(201).json(consultation);
-
-//     } catch (error) {
-//         await t.rollback();
-//         console.error(error);
-//         res.status(500).send('Server Error');
-//     }
-// };
-
-
-
 exports.bookConsultation = async (req, res) => {
     const { slotId } = req.params;
     const patient_id = req.user.id;
@@ -216,4 +176,107 @@ exports.cancelConsultation = async (req, res) => {
         console.error("Cancel Consultation Error:", error);
         res.status(500).send('Server Error');
     }
+
+};
+
+
+    // @desc    Send a message within a consultation
+// @route   POST /api/consultations/:id/messages
+// @access  Private (Patient or Doctor involved)
+// in controllers/consultationController.js
+
+exports.sendMessage = async (req, res) => {
+    const consultationId = req.params.id;
+    const senderId = req.user.id;
+    const { message_text, language } = req.body; // Expect language (e.g., 'ar', 'en') from the client
+
+    try {
+        const consultation = await Consultation.findByPk(consultationId, {
+            // Eagerly load the user details to get their language preferences
+            include: [
+                { model: User, as: 'patient' },
+                { model: User, as: 'doctor' }
+            ]
+        });
+
+        if (!consultation) {
+            return res.status(404).json({ msg: 'Consultation not found' });
+        }
+
+        // Security check
+        if (consultation.patient_id !== senderId && consultation.doctor_id !== senderId) {
+            return res.status(403).json({ msg: 'Not authorized to send messages in this consultation' });
+        }
+
+        // Determine sender, receiver, and their language preferences
+        const sender = senderId === consultation.patient_id ? consultation.patient : consultation.doctor;
+        const receiver = senderId === consultation.patient_id ? consultation.doctor : consultation.patient;
+        const receiverLang = receiver.language_pref || 'en'; // Default receiver to English if not set
+
+        let translated_text = null;
+
+        // --- TRANSLATION LOGIC ---
+        if (language && language !== receiverLang) {
+            try {
+                console.log(`Translating from '${language}' to '${receiverLang}'...`);
+                translated_text = await translate(message_text, { from: language, to: receiverLang });
+                console.log(`Translation successful: "${translated_text}"`);
+            } catch (translationError) {
+                console.error("Translation API Error:", translationError);
+                // Don't stop the message from being sent; just note the translation failed.
+                // In a real app, you might handle this more gracefully.
+            }
+        }
+
+        // Create the message with original text and optional translation
+        const message = await Message.create({
+            consultation_id: consultationId,
+            sender_id: senderId,
+            receiver_id: receiver.id,
+            message_text,
+            language,
+            translated_text
+        });
+
+        res.status(201).json(message);
+
+    } catch (error) {
+        console.error("Send Message Error:", error);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get all messages for a consultation
+// @route   GET /api/consultations/:id/messages
+// @access  Private (Patient or Doctor involved)
+    exports.getMessages = async (req, res) => {
+        const consultationId = req.params.id;
+        const userId = req.user.id;
+
+        try {
+            const consultation = await Consultation.findByPk(consultationId);
+            if (!consultation) {
+                return res.status(404).json({ msg: 'Consultation not found' });
+            }
+
+            // Security: Ensure the user is part of this consultation
+            if (consultation.patient_id !== userId && consultation.doctor_id !== userId) {
+                return res.status(403).json({ msg: 'Not authorized to view these messages' });
+            }
+
+            const messages = await Message.findAll({
+                where: { consultation_id: consultationId },
+                include: [ // Include sender info to display names in the chat
+                    { model: User, as: 'sender', attributes: ['id', 'username', 'role'] }
+                ],
+                order: [['createdAt', 'ASC']] // Order messages chronologically
+            });
+
+            res.json(messages);
+
+        } catch (error) {
+            console.error("Get Messages Error:", error);
+            res.status(500).send('Server Error');
+        }
+
 };

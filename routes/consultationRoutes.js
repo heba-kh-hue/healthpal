@@ -25,7 +25,7 @@ router.get('/consultations/me', protect, authorize('patient', 'doctor'), getMyCo
 
 router.put('/consultations/:id/cancel', protect, authorize('patient', 'doctor'), cancelConsultation);
 
-router.route('/consultations/:consultationId/messages')
+router.route('/consultations/:id/messages')
     .post(protect, authorize('patient', 'doctor'), sendMessage)
     .get(protect, authorize('patient', 'doctor'), getMessages);
 

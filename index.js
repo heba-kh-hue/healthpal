@@ -1,11 +1,29 @@
 // index.js
 
-const express = require('express');
-const sequelize = require('./config/database');
+// const express = require('express');
+// const sequelize = require('./config/database');
+//
+// // --- MIDDLEWARE ---
+// const app = express();
+// app.use(express.json());
 
-// --- MIDDLEWARE ---
+
+// in index.js
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet'); // ADDED
+const morgan = require('morgan'); // ADDED
+
+// ... other imports ...
+
 const app = express();
+
+// --- CORE MIDDLEWARE (add the new ones here) ---
+app.use(helmet()); // Sets security headers
+app.use(morgan('dev')); // Logs requests to the console
+app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads')); // Serves uploaded files statically
 
 // --- MODELS & ASSOCIATIONS ---
 const User = require('./models/User');
@@ -14,6 +32,10 @@ const ConsultationSlot = require('./models/ConsultationSlot');
 const MentalHealthConsultation = require('./models/MentalHealthConsultation');
 const Message = require('./models/Message');
 
+const TreatmentRequest = require('./models/TreatmentRequest');
+const Donation = require('./models/Donation');
+const RecoveryUpdate = require('./models/RecoveryUpdate');
+const SponsorshipVerification = require('./models/SponsorshipVerification');
 
 // User (Doctor) has many ConsultationSlots
 User.hasMany(ConsultationSlot, { foreignKey: 'doctor_id' });
@@ -38,26 +60,76 @@ Consultation.hasOne(MentalHealthConsultation, { foreignKey: 'consultation_id', o
 MentalHealthConsultation.belongsTo(Consultation, { foreignKey: 'consultation_id' });
 
 
-Message.belongsTo(User, { as: 'sender', foreignKey: 'sender_id' });
-Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiver_id' });
+Consultation.hasMany(Message, { foreignKey: 'consultation_id', onDelete: 'CASCADE' });
 Message.belongsTo(Consultation, { foreignKey: 'consultation_id' });
-Consultation.hasMany(Message, { foreignKey: 'consultation_id', onDelete: 'CASCADE' }); 
+
+// A Message has a Sender (a User)
+User.hasMany(Message, { as: 'sent_messages', foreignKey: 'sender_id', onDelete: 'CASCADE' });
+Message.belongsTo(User, { as: 'sender', foreignKey: 'sender_id' });
+
+// A Message has a Receiver (a User)
+User.hasMany(Message, { as: 'received_messages', foreignKey: 'receiver_id', onDelete: 'CASCADE' });
+Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiver_id' });
+
+
+// A TreatmentRequest is created by a Doctor (User) for a Patient (User)
+TreatmentRequest.belongsTo(User, { as: 'doctor', foreignKey: 'doctor_id' });
+TreatmentRequest.belongsTo(User, { as: 'patient', foreignKey: 'patient_id' });
+User.hasMany(TreatmentRequest, { as: 'created_treatment_requests', foreignKey: 'doctor_id' });
+User.hasMany(TreatmentRequest, { as: 'patient_treatment_requests', foreignKey: 'patient_id' });
+
+// A TreatmentRequest can optionally be linked to a Consultation
+TreatmentRequest.belongsTo(Consultation, { foreignKey: 'consultation_id', allowNull: true });
+Consultation.hasMany(TreatmentRequest, { foreignKey: 'consultation_id' });
+
+// A TreatmentRequest can have many Donations
+TreatmentRequest.hasMany(Donation, { foreignKey: 'treatment_request_id', onDelete: 'CASCADE' });
+Donation.belongsTo(TreatmentRequest, { foreignKey: 'treatment_request_id' });
+
+// A Donation is made by a Donor (User)
+Donation.belongsTo(User, { as: 'donor', foreignKey: 'donor_id' });
+User.hasMany(Donation, { foreignKey: 'donor_id' });
+
+TreatmentRequest.hasMany(RecoveryUpdate, { foreignKey: 'treatment_request_id', onDelete: 'CASCADE' });
+RecoveryUpdate.belongsTo(TreatmentRequest, { foreignKey: 'treatment_request_id' });
+RecoveryUpdate.belongsTo(User, { as: 'patient', foreignKey: 'patient_id' });
+User.hasMany(RecoveryUpdate, { as: 'recovery_updates', foreignKey: 'patient_id' });
+
+// A Verification is linked to one TreatmentRequest (one-to-one)
+TreatmentRequest.hasOne(SponsorshipVerification, { foreignKey: 'treatment_request_id', onDelete: 'CASCADE' });
+SponsorshipVerification.belongsTo(TreatmentRequest, { foreignKey: 'treatment_request_id' });
+
+// A Verification is approved by a User (Admin/Hospital)
+SponsorshipVerification.belongsTo(User, { as: 'approved_by_user', foreignKey: 'approved_by' });
+
+
+
+// const notFound = require('./middleware/notFound');
+// const errorHandler = require('./middleware/errorHandler');
+//
+// app.use(notFound);
+// app.use(errorHandler);
+
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ /* ... */ });
+});
 
 // --- DATABASE & SERVER START ---
 const startServer = async () => {
     try {
         await sequelize.authenticate();
-        console.log('✅ Database connection has been established successfully.');
+        console.log('Database connection has been established successfully.');
         
         // Use { alter: true } to update tables if the model changes. Avoids dropping data.
         await sequelize.sync({ alter: true });
-        console.log('✅ All models were synchronized successfully.');
+        console.log('All models were synchronized successfully.');
         
         app.listen(PORT, () => {
             console.log(`Server has started successfully on http://localhost:${PORT}`);
         });
     } catch (error) {
-        console.error('❌ Unable to start the server:', error);
+        console.error('Unable to start the server:', error);
     }
 };
 
@@ -68,64 +140,16 @@ app.get('/', (req, res) => res.send('HealthPal API is up and running!'));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api', require('./routes/consultationRoutes'));
+app.use('/api/sponsorship', require('./routes/sponsorshipRoutes'));
 
-// We will add the new routes here soon
 
+app.use('/api/v1', require('./routes/api'));
+
+
+app.use('/api/medicine', require('./routes/medicineRoutes'));
+app.use('/api/guides', require('./routes/guidesRoutes'));
+app.use('/api/alerts', require('./routes/alertsRoutes'));
+app.use('/api/inventory', require('./routes/inventoryRoutes'));
+
+app.use('/api/news', require('./routes/newsRoutes'));
 startServer();
-
-///////////////////////////////////////
-// const express = require('express');
-// const sequelize = require('./config/database');
-
-// // --- MIDDLEWARE ---
-// const app = express();
-// app.use(express.json()); // Crucial: This must come before the routes are defined
-
-// // --- MODELS & ASSOCIATIONS ---
-// const User = require('./models/User');
-// const Consultation = require('./models/Consultation');
-// const ConsultationSlot = require('./models/ConsultationSlot');
-
-// // User (Doctor) has many ConsultationSlots
-// User.hasMany(ConsultationSlot, { foreignKey: 'doctor_id', onDelete: 'CASCADE' });
-// ConsultationSlot.belongsTo(User, { as: 'doctor', foreignKey: 'doctor_id' });
-
-// // User (Patient) has many Consultations
-// User.hasMany(Consultation, { as: 'patient_consultations', foreignKey: 'patient_id', onDelete: 'CASCADE' });
-// Consultation.belongsTo(User, { as: 'patient', foreignKey: 'patient_id' });
-
-// // User (Doctor) has many Consultations
-// User.hasMany(Consultation, { as: 'doctor_consultations', foreignKey: 'doctor_id', onDelete: 'CASCADE' });
-// Consultation.belongsTo(User, { as: 'doctor', foreignKey: 'doctor_id' });
-
-// // A ConsultationSlot can have one Consultation
-// ConsultationSlot.hasOne(Consultation, { foreignKey: 'slot_id', onDelete: 'SET NULL' });
-// Consultation.belongsTo(ConsultationSlot, { as: 'slot', foreignKey: 'slot_id' });
-
-// const PORT = process.env.PORT || 5000;
-
-// // --- ROUTES ---
-// app.get('/', (req, res) => res.send('HealthPal API is up and running!'));
-// app.use('/api/auth', require('./routes/authRoutes'));
-// app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api', require('./routes/consultationRoutes'));
-
-
-// // --- DATABASE & SERVER START ---
-// const startServer = async () => {
-//     try {
-//         await sequelize.authenticate();
-//         console.log('✅ Database connection has been established successfully.');
-        
-//         await sequelize.sync({ alter: true });
-//         console.log('✅ All models were synchronized successfully.');
-        
-//         app.listen(PORT, () => {
-//             console.log(`🚀 Server has started successfully on http://localhost:${PORT}`);
-//         });
-//     } catch (error) {
-//         console.error('❌ Unable to start the server:', error);
-//     }
-// };
-
-// startServer();

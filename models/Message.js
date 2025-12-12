@@ -7,40 +7,18 @@ const Message = sequelize.define('Message', {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    language: {
+    language: { // e.g., 'en', 'ar'
         type: DataTypes.STRING,
-        allowNull: true,
-        // You can add validation later, e.g., isIn: [['ar', 'en']]
+        allowNull: true
     },
-    translated_text: {
+    translated_text: { // Will be used later for translation feature
         type: DataTypes.TEXT,
         allowNull: true
     }
-    // sender_id, receiver_id, and consultation_id will be added via associations.
+    // sender_id, receiver_id, and consultation_id are handled by associations
 }, {
-    // createdAt and updatedAt are handled automatically by Sequelize
+    // createdAt: 'created_at',
+    // updatedAt: 'updated_at'
 });
 
 module.exports = Message;
-
-// // models/Message.js
-// const { DataTypes } = require('sequelize');
-// const sequelize = require('../config/database');
-
-// const Message = sequelize.define('Message', {
-//     message_text: {
-//         type: DataTypes.TEXT,
-//         allowNull: false
-//     },
-//     language: {
-//         type: DataTypes.STRING,
-//         allowNull: true // e.g., 'ar', 'en'
-//     },
-//     translated_text: {
-//         type: DataTypes.TEXT,
-//         allowNull: true
-//     }
-//     // sender_id, receiver_id, and consultation_id will be handled by associations
-// });
-
-// module.exports = Message;

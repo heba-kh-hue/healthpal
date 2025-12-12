@@ -1,12 +1,13 @@
+// models/TreatmentRequest.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const TreatmentRequest = sequelize.define('TreatmentRequest', {
     treatment_type: {
-        type: DataTypes.ENUM('surgery', 'cancer_treatment', 'dialysis', 'rehabilitation', 'medication'),
+        type: DataTypes.ENUM('surgery', 'cancer_treatment', 'dialysis', 'rehabilitation', 'prescription', 'other'),
         allowNull: false
     },
-    content: {
+    content: { // Medical notes or description of the treatment
         type: DataTypes.TEXT,
         allowNull: false
     },
@@ -22,7 +23,9 @@ const TreatmentRequest = sequelize.define('TreatmentRequest', {
         type: DataTypes.ENUM('open', 'funded', 'closed', 'cancelled'),
         defaultValue: 'open'
     }
-    // patient_id and doctor_id will be added via associations
+    // doctor_id, patient_id, and consultation_id are handled by associations
+}, {
+    // Timestamps are handled automatically
 });
 
 module.exports = TreatmentRequest;
