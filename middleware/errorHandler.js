@@ -1,5 +1,5 @@
 function errorHandler(err, req, res, next) {
-  console.error("🔥 Error:", err);
+  console.error(" Error:", err);
 
   res.status(err.status || 500).json({
     success: false,
@@ -8,3 +8,4 @@ function errorHandler(err, req, res, next) {
 }
 
 module.exports = errorHandler;
+
