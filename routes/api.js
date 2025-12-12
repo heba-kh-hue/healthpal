@@ -1,42 +1,54 @@
 const express = require('express');
 const router = express.Router();
-const Auth = require('../controllers/AuthController');
+
+// Import Your Refactored Controllers
 const Coord = require('../controllers/CoordinationController');
 const Health = require('../controllers/PublicHealthController');
-const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
 
-// Auth
-router.post('/auth/login', Auth.login);
+// IMPORT PARTNER'S MIDDLEWARE (Crucial Step)
+// Note: Ensure this path is correct based on where they put it
+const { protect, authorize } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware'); // Keep your upload logic
 
-// Inventory (Donors)
-router.post('/inventory/add', verifyToken, checkRole(['donor', 'admin']), upload.single('image'), Coord.addInventory);
+// --- FEATURE 3: Inventory & Requests ---
+
+// Add Inventory (Protected: Donor or Admin)
+router.post('/inventory/add', protect, authorize('donor', 'admin'), upload.single('image'), Coord.addInventory);
+// Search Inventory (Public)
 router.get('/inventory/search', Coord.search);
 
-// Requests (Patients & NGOs)
-router.post('/requests/create', verifyToken, checkRole(['patient']), Coord.createRequest);
-router.post('/requests/fulfill', verifyToken, checkRole(['ngo', 'admin']), Coord.fulfillRequest);
+// Create Request (Protected: Patient)
+router.post('/requests/create', protect, authorize('patient'), Coord.createRequest);
 
-// Alerts (Admin)
-router.post('/alerts', verifyToken, checkRole(['admin', 'hospital']), Health.createAlert);
+// Fulfill Request (Protected: NGO or Admin)
+router.post('/requests/fulfill', protect, authorize('ngo', 'admin'), Coord.fulfillRequest);
+
+
+// --- FEATURE 4: Education & Alerts ---
+
+// Create Alert (Protected: Admin or Hospital)
+router.post('/alerts', protect, authorize('admin', 'hospital'), Health.createAlert);
+
+// Get Alerts (Public)
 router.get('/alerts', Health.getAlerts);
 
-
-// Guides
+// Get Guides (Public)
 router.get('/guides', Health.getGuides);
 
-// Workshops (Updated)
-router.get('/workshops', Health.getWorkshops); // Public list
-
-// Propose Workshop (Doctors, NGOs, Admin)
-router.post('/workshops/create', verifyToken, checkRole(['doctor', 'ngo', 'admin']), Health.createWorkshop);
-
-// Join Workshop (Any Logged in User: Patient, etc)
-router.post('/workshops/join', verifyToken, Health.joinWorkshop);
-
+// Get External News (Public)
 router.get('/external/news', Health.getGlobalNews);
 
-router.post('/auth/login', Auth.login);
-router.post('/auth/register', Auth.register); // New Endpoint
+
+// --- WORKSHOPS ---
+
+// Get Workshops (Public)
+router.get('/workshops', Health.getWorkshops);
+
+// Propose Workshop (Protected: Doctor, NGO, Admin)
+router.post('/workshops/create', protect, authorize('doctor', 'ngo', 'admin'), Health.createWorkshop);
+
+// Join Workshop (Protected: Any logged in user)
+router.post('/workshops/join', protect, Health.joinWorkshop);
+
 
 module.exports = router;

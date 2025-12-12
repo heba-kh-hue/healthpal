@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db");
+const sequelize = require("../config/database");
 
 const PublicHealthAlert = sequelize.define("public_health_alerts", {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

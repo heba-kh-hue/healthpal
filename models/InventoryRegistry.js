@@ -1,6 +1,6 @@
 // src/models/InventoryRegistry.js
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db");
+const sequelize = require("../config/database");
 
 const InventoryRegistry = sequelize.define(
   "inventory_registry",              // اسم الموديل (أي شيء، بس خليه هيك)
